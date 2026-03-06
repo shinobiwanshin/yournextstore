@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { YNSImage } from "@/lib/yns-image";
@@ -57,13 +57,29 @@ export function ImageGallery({ images, productName, variants }: ImageGalleryProp
 		return images;
 	}, [variants, searchParams, images]);
 
-	const handlePrevious = () => {
+	const handlePrevious = useCallback(() => {
 		setSelectedIndex((prev) => (prev === 0 ? displayImages.length - 1 : prev - 1));
-	};
+	}, [displayImages.length]);
 
-	const handleNext = () => {
+	const handleNext = useCallback(() => {
 		setSelectedIndex((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1));
-	};
+	}, [displayImages.length]);
+
+	// Keyboard navigation: ArrowLeft / ArrowRight (scoped to gallery container)
+	const handleKeyDown = useCallback(
+		(e: React.KeyboardEvent<HTMLDivElement>) => {
+			if (displayImages.length <= 1) return;
+
+			if (e.key === "ArrowLeft") {
+				e.preventDefault();
+				handlePrevious();
+			} else if (e.key === "ArrowRight") {
+				e.preventDefault();
+				handleNext();
+			}
+		},
+		[displayImages.length, handlePrevious, handleNext],
+	);
 
 	if (displayImages.length === 0) {
 		return (
@@ -76,7 +92,11 @@ export function ImageGallery({ images, productName, variants }: ImageGalleryProp
 	}
 
 	return (
-		<div className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
+		<div
+			tabIndex={0}
+			onKeyDown={handleKeyDown}
+			className="flex flex-col gap-4 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:rounded-2xl lg:sticky lg:top-24 lg:self-start"
+		>
 			{/* Main Image */}
 			<div className="group relative aspect-square overflow-hidden rounded-2xl bg-secondary">
 				<YNSImage
@@ -140,7 +160,7 @@ export function ImageGallery({ images, productName, variants }: ImageGalleryProp
 				<div className="flex gap-3 overflow-x-auto p-2 -m-2">
 					{displayImages.map((image, index) => (
 						<button
-							key={image}
+							key={`${image}-${index}`}
 							type="button"
 							onClick={() => setSelectedIndex(index)}
 							className={cn(
